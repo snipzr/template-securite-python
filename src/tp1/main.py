@@ -12,7 +12,7 @@ def main():
     interface = "eth0"
     count = 10
 
-    print(f"Logger : capture sur ma {interface} : {count} paquets")
+    # capture reseau
     capture = Capture(interface, count)
     capture.capture_traffic()
     print(f"Logger: terminé : {len(capture.packets)} paquets captures")
@@ -23,7 +23,7 @@ def main():
     capture.analyse("tcp")
     summary = capture.get_summary()
 
-    filename = "report.pdf"
+    filename = "rapport.pdf"
     report = Report(capture, filename, summary)
     report.generate("graph")
     report.generate("array")

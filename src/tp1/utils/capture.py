@@ -1,5 +1,5 @@
 from scapy.all import sniff
-from src.tp1.utils.lib import choose_interface
+from tp1.utils.lib import choose_interface, count_protocols, check_arp_response
 from tp1.utils.config import logger
 
 
@@ -9,6 +9,8 @@ class Capture:
         self.count = count
         self.packets = []
         self.summary = ""
+        self.protocol_stats = {}
+        self.attacks = []
 
     def capture_traffic(self) -> None:
         """
@@ -21,34 +23,51 @@ class Capture:
         print(f"Logger : {len(self.packets)} paquets capturés")
         logger.info(f"{len(self.packets)} packets captured")
 
-    def sort_network_protocols(self) -> str:
+    def sort_network_protocols(self) -> dict:
         """
         Sort and return all captured network protocols
         """
-        return ""
+        # trie les protocoles par nombre de paquets
+        sorted_stats = dict(
+            sorted(self.protocol_stats.items(), key=lambda x: x[1], reverse=True)
+        )
+        return sorted_stats
 
-    def get_all_protocols(self) -> str:
+    def get_all_protocols(self) -> dict:
         """
         Return all protocols captured with total packets number
         """
-        return ""
+        self.protocol_stats = count_protocols(self.packets)
+        return self.protocol_stats
 
     def analyse(self, protocols: str) -> None:
         """
         Analyse all captured data and return statement
-        Si un tra c est illégitime (exemple : Injection SQL, ARP
-        Spoo ng, etc)
-        a Noter la tentative d'attaque.
-        b Relever le protocole ainsi que l'adresse réseau/physique
+        Si un trafic est illégitime (exemple : Injection SQL, ARP
+        Spoofing, etc)
+        a) Noter la tentative d'attaque.
+        b) Relever le protocole ainsi que l'adresse réseau/physique
         de l'attaquant.
-        c (FACULTATIF) Opérer le blocage de la machine
+        c) (FACULTATIF) Opérer le blocage de la machine
         attaquante.
-        Sinon a cher que tout va bien
+        Sinon afficher que tout va bien
         """
-        all_protocols = self.get_all_protocols()
-        sort = self.sort_network_protocols()
-        logger.debug(f"All protocols: {all_protocols}")
-        logger.debug(f"Sorted protocols: {sort}")
+        self.protocol_stats = self.get_all_protocols()
+        sorted_protocols = self.sort_network_protocols()
+        logger.debug(f"All protocols: {self.protocol_stats}")
+        logger.debug(f"Sorted protocols: {sorted_protocols}")
+
+        # detection attaques arp
+        self.attacks = []
+        for pkt in self.packets:
+            arp_attack = check_arp_response(pkt)
+            if arp_attack:
+                self.attacks.append(arp_attack)
+
+        if self.attacks:
+            print(f"Logger : {len(self.attacks)} attaques detectees")
+        else:
+            print("Logger : aucune attaque detectee")
 
         self.summary = self._gen_summary()
 
@@ -63,5 +82,14 @@ class Capture:
         """
         Generate summary
         """
-        summary = ""
+        summary = "Rapport ids/ips\n"
+        summary += f"Paquets captures: {len(self.packets)}\n"
+        for proto, cnt in self.protocol_stats.items():
+            summary += f"  {proto}: {cnt}\n"
+        if self.attacks:
+            summary += f"Attaques detectees: {len(self.attacks)}\n"
+            for atk in self.attacks:
+                summary += f"  {atk['type']} - IP: {atk['ip']} MAC: {atk['mac']}\n"
+        else:
+            summary += "Aucune attaque detectee\n"
         return summary

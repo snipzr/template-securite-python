@@ -1,6 +1,19 @@
 from scapy.all import TCP, UDP, ICMP, ARP, DNS
 
 
+def check_arp_response(packet):
+    """
+    Verifie si un paquet ARP est une reponse (potentiel spoofing)
+    """
+    if packet.haslayer(ARP):
+        if packet[ARP].op == 2:
+            src_ip = packet[ARP].psrc
+            src_mac = packet[ARP].hwsrc
+            print(f"Logger : arp reply detecte, ip: {src_ip} mac: {src_mac}")
+            return {"type": "ARP_SPOOFING", "ip": src_ip, "mac": src_mac}
+    return None
+
+
 def hello_world() -> str:
     """
     Hello world function
