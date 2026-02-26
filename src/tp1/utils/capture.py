@@ -1,5 +1,5 @@
 from scapy.all import sniff
-from tp1.utils.lib import choose_interface, count_protocols, check_arp_response
+from tp1.utils.lib import choose_interface, count_protocols, check_arp_response, check_sql_payload
 from tp1.utils.config import logger
 
 
@@ -27,7 +27,6 @@ class Capture:
         """
         Sort and return all captured network protocols
         """
-        # trie les protocoles par nombre de paquets
         sorted_stats = dict(
             sorted(self.protocol_stats.items(), key=lambda x: x[1], reverse=True)
         )
@@ -57,12 +56,14 @@ class Capture:
         logger.debug(f"All protocols: {self.protocol_stats}")
         logger.debug(f"Sorted protocols: {sorted_protocols}")
 
-        # detection attaques arp
         self.attacks = []
         for pkt in self.packets:
             arp_attack = check_arp_response(pkt)
             if arp_attack:
                 self.attacks.append(arp_attack)
+            sql_attack = check_sql_payload(pkt)
+            if sql_attack:
+                self.attacks.append(sql_attack)
 
         if self.attacks:
             print(f"Logger : {len(self.attacks)} attaques detectees")
@@ -89,7 +90,7 @@ class Capture:
         if self.attacks:
             summary += f"Attaques detectees: {len(self.attacks)}\n"
             for atk in self.attacks:
-                summary += f"  {atk['type']} - IP: {atk['ip']} MAC: {atk['mac']}\n"
+                summary += f"  {atk['type']} - {atk}\n"
         else:
             summary += "Aucune attaque detectee\n"
         return summary

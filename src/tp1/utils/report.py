@@ -1,4 +1,5 @@
 import pygal
+from pygal.style import Style
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
@@ -21,7 +22,8 @@ class Report:
         Generate graph and array
         """
         if param == "graph":
-            chart = pygal.Bar()
+            custom_style = Style(colors=("#3498db", "#2ecc71", "#9b59b6", "#e74c3c", "#f39c12"))
+            chart = pygal.Bar(style=custom_style)
             chart.title = "Protocoles captures"
             for proto, count in self.capture.protocol_stats.items():
                 chart.add(proto, count)
@@ -59,6 +61,12 @@ class Report:
                 )
             )
             elements.append(table)
+
+        if self.capture.attacks:
+            elements.append(Paragraph("Menaces detectees", styles["Heading2"]))
+            for attack in self.capture.attacks:
+                attack_text = f"{attack['type']} - {attack}"
+                elements.append(Paragraph(attack_text, styles["Normal"]))
 
         doc.build(elements)
         print(f"Logger : {filename} cree")
