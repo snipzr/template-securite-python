@@ -1,5 +1,5 @@
+import requests
 from src.tp3.utils.captcha import Captcha
-
 
 class Session:
     """
@@ -23,6 +23,8 @@ class Session:
         self.captcha_value = ""
         self.flag_value = ""
         self.valid_flag = ""
+        
+        self.http_sess = requests.Session()
 
     def prepare_request(self):
         """
