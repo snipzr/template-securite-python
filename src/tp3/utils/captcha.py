@@ -1,6 +1,7 @@
 import io
 from urllib.parse import urljoin
-from PIL import Image
+import pytesseract
+from PIL import Image, ImageFilter
 from src.tp3.utils.config import logger
 
 class Captcha:
@@ -12,9 +13,25 @@ class Captcha:
 
     def solve(self):
         """
-        Fonction permettant la résolution du captcha.
+        Traitement d'image pour aider l'OCR, puis extraction textuelle.
         """
-        self.value = "FIXME"
+        if self.image is None:
+            logger.warning("pas d'image a resoudre")
+            self.value = ""
+            return
+
+        img_processed = self.image.convert("L") 
+        
+        limit_seuil = 128
+        img_processed = img_processed.point(lambda px: 255 if px > limit_seuil else 0)
+        
+        img_processed = img_processed.filter(ImageFilter.SHARPEN)
+        
+        config_ocr = "--psm 7 -c tessedit_char_whitelist=0123456789"
+        raw_text = pytesseract.image_to_string(img_processed, config=config_ocr)
+
+        self.value = raw_text.strip()
+        logger.debug(f"captcha resolu : '{self.value}'")
 
     def capture(self):
         """
