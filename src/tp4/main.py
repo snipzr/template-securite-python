@@ -7,7 +7,7 @@ from pwn import context, remote
 
 TARGET_HOST = "127.0.0.1"
 TARGET_PORT = 8080
-LOOP_COUNT = 82
+LOOP_COUNT = 87
 DELIMITER = b": "
 SOCKET_TIMEOUT = 0.45
 
@@ -50,21 +50,31 @@ def run_decoder() -> None:
     context.log_level = "error"
     logger.info("tp4 client pret : boucle decode + send")
 
-    target_conn = remote(TARGET_HOST, TARGET_PORT, timeout=0.60)
-    logger.success(f"connected to {TARGET_HOST}:{TARGET_PORT}")
+    target_conn = None
+    try:
+        target_conn = remote(TARGET_HOST, TARGET_PORT, timeout=0.60)
+        logger.success(f"connected to {TARGET_HOST}:{TARGET_PORT}")
 
-    for loop_count in range(1, LOOP_COUNT + 1):
-        raw_b64_chunk = read_b64_chunk(target_conn)
-        decoded_text = decode_chunk(raw_b64_chunk)
-        logger.info(f"loop #{loop_count} | raw len={len(raw_b64_chunk)}")
-        target_conn.sendline(decoded_text)
+        for loop_count in range(1, LOOP_COUNT + 1):
+            raw_b64_chunk = read_b64_chunk(target_conn)
+            decoded_text = decode_chunk(raw_b64_chunk)
+            logger.info(f"loop #{loop_count} | raw len={len(raw_b64_chunk)}")
+            target_conn.sendline(decoded_text)
 
-    final_line = target_conn.recvline(timeout=0.60).strip()
-    if final_line:
-        logger.success(f"server reply: {final_line.decode('utf-8', errors='ignore')}")
+        final_line = target_conn.recvline(timeout=0.60).strip()
+        if final_line:
+            logger.success(f"server reply: {final_line.decode('utf-8', errors='ignore')}")
 
-    target_conn.close()
-    logger.info("connection closed")
+    except EOFError:
+        logger.warning("server closed , fin de challenge")
+    except KeyboardInterrupt:
+        logger.warning("stop manuel")
+    except Exception as err:
+        logger.error(f"decoder error: {err}")
+    finally:
+        if target_conn is not None:
+            target_conn.close()
+            logger.info("connection closed")
 
 
 if __name__ == "__main__":
