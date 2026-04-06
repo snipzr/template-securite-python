@@ -3,7 +3,7 @@ import binascii
 import sys
 
 from loguru import logger
-from pwn import context
+from pwn import context, remote
 
 TARGET_HOST = "127.0.0.1"
 TARGET_PORT = 8080
@@ -29,6 +29,20 @@ def decode_chunk(raw_b64_chunk: bytes) -> bytes:
         b64_padding_fix = b"=" * (-len(raw_b64_chunk) % 4)
         decoded_text = base64.b64decode(raw_b64_chunk + b64_padding_fix, validate=False)
         return decoded_text
+
+
+def read_b64_chunk(target_conn):
+    target_conn.recvuntil(DELIMITER, timeout=SOCKET_TIMEOUT)
+    raw_b64_chunk = target_conn.recvline(timeout=SOCKET_TIMEOUT).strip()
+
+    if raw_b64_chunk:
+        return raw_b64_chunk
+
+    raw_b64_chunk = target_conn.recvregex(
+        rb"[A-Za-z0-9+/]{4,}={0,2}\r?\n",
+        timeout=SOCKET_TIMEOUT,
+    ).strip()
+    return raw_b64_chunk
 
 
 def run_decoder() -> None:
