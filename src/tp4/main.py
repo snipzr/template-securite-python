@@ -48,11 +48,23 @@ def read_b64_chunk(target_conn):
 def run_decoder() -> None:
     setup_logs()
     context.log_level = "error"
-    logger.info("tp4 client pret : base logs + decodeur base64")
+    logger.info("tp4 client pret : boucle decode + send")
 
-    test_chunk = b"bW9jay10cDQtY2xpZW50"
-    decoded_test = decode_chunk(test_chunk)
-    logger.success(decoded_test.decode("utf-8", errors="ignore"))
+    target_conn = remote(TARGET_HOST, TARGET_PORT, timeout=0.60)
+    logger.success(f"connected to {TARGET_HOST}:{TARGET_PORT}")
+
+    for loop_count in range(1, LOOP_COUNT + 1):
+        raw_b64_chunk = read_b64_chunk(target_conn)
+        decoded_text = decode_chunk(raw_b64_chunk)
+        logger.info(f"loop #{loop_count} | raw len={len(raw_b64_chunk)}")
+        target_conn.sendline(decoded_text)
+
+    final_line = target_conn.recvline(timeout=0.60).strip()
+    if final_line:
+        logger.success(f"server reply: {final_line.decode('utf-8', errors='ignore')}")
+
+    target_conn.close()
+    logger.info("connection closed")
 
 
 if __name__ == "__main__":
